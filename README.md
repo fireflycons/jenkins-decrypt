@@ -1,1 +1,10 @@
-Released under MIT License. This repository is in maintenance mode. For pull requests, please use: https://github.com/bstapes/jenkins-decrypt.
+You will need the following files from within the Jenkins home dir
+
+* master.key
+* hudson.util.Secret
+* credentials.xml
+
+Run the script:
+```
+./decrypt.py ./master.key ./hudson.util.Secret ./credentials.xml
+```
