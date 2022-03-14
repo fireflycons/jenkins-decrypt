@@ -1,8 +1,10 @@
 #!/usr/bin/env python3
 
+from cgitb import text
 import re
 import sys
 import base64
+import xml.etree.ElementTree as ET
 from hashlib import sha256
 from binascii import hexlify, unhexlify
 from Crypto.Cipher import AES
@@ -68,19 +70,83 @@ def main():
   secret = secret[:16]
 
   credentials = open(sys.argv[3]).read()
-  passwords = re.findall(r'<p(?:assword|rivateKey)>\{?(.*?)\}?</p(?:assword|rivateKey)>', credentials)
+  xml = ET.parse(sys.argv[3])
+
+  password_entries = []
+  for elem in xml._root.iter('com.cloudbees.plugins.credentials.impl.UsernamePasswordCredentialsImpl'):
+    password_entries.append ({
+      'Type': 'UsernamePasswordCredentials',
+      'Id': elem.find('id').text,
+      'Username': elem.find('username').text,
+      'CipherText': elem.find('password').text
+    })
+
+  for elem in xml._root.iter('com.cloudbees.jenkins.plugins.sshcredentials.impl.BasicSSHUserPrivateKey'):
+    password_entries.append ({
+      'Type': 'BasicSSHUserPrivateKey',
+      'Id': elem.find('id').text,
+      'Username': elem.find('username').text,
+      'CipherText': elem.find('privateKeySource').find('privateKey').text
+    })
+
+  for elem in xml._root.iter('com.cloudbees.plugins.credentials.impl.StringCredentialsImpl'):
+    password_entries.append ({
+      'Type': 'StringCredentials',
+      'Id': elem.find('id').text,
+      'CipherText': elem.find('secret').text
+    })
+
+  for elem in xml._root.iter('com.dabsquared.gitlabjenkins.connection.GitLabApiTokenImpl'):
+    password_entries.append ({
+      'Type': 'GitLabApiToken',
+      'Id': elem.find('id').text,
+      'CipherText': elem.find('apiToken').text
+    })
+
+  for elem in xml._root.iter('com.datapipe.jenkins.vault.credentials.VaultAppRoleCredential'):
+    password_entries.append ({
+      'Type': 'VaultAppRoleCredential',
+      'Id': elem.find('id').text,
+      'CipherText': elem.find('secretId').text,
+      'RoleId': elem.find('roleId').text,
+      'Path': elem.find('path').text
+    })
 
   # You can find the password format at https://github.com/jenkinsci/jenkins/blob/master/core/src/main/java/hudson/util/Secret.java#L167-L216
 
-  for password in passwords:
-    p = base64.decodestring(bytes(password, 'utf-8'))
+  for password_entry in password_entries:
+    p = base64.decodebytes(bytes(password_entry['CipherText'], 'utf-8'))
 
     # Get payload version
     payload_version = p[0]
     if payload_version == 1:
-      print(decryptNewPassword(secret, p))
+      password = decryptNewPassword(secret, p)
     else: # Assuming we don't have a V2 payload, seeing as current crypto isn't horrible that's a fair assumption
-      print(decryptOldPassword(secret,p))
+      password = decryptOldPassword(secret,p)
+
+    print (password_entry['Type'])
+    print ('-' * len(password_entry['Type']))
+    print(f'Id:       {password_entry["Id"]}')
+
+    if password_entry['Type'] == 'UsernamePasswordCredentials':
+      print(f'Username: {password_entry["Username"]}')
+      print(f'Password: {password}')
+    elif password_entry['Type'] == 'BasicSSHUserPrivateKey':
+      print(f'Username: {password_entry["Username"]}')
+      print('Private Key:')
+      print(password)
+    elif password_entry['Type'] == 'StringCredentials':
+      print(f'Password: {password}')
+    elif password_entry['Type'] == 'GitLabApiToken':
+      print(f'Token: {password}')
+    elif password_entry['Type'] == 'VaultAppRoleCredential':
+      print(f'Role ID  : {password_entry["RoleId"]}')
+      print(f'Path     : {password_entry["Path"]}')
+      print(f'Secret ID: {password}')
+
+    print ('')
+    print ('=' * 80)
+    print ('')
 
 if __name__ == '__main__':
   main()
