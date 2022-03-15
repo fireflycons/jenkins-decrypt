@@ -4,7 +4,7 @@ You will need the following files from within the Jenkins home directory:
 
 * `master.key`
 * `hudson.util.Secret`
-* `credentials.xml` or a secret cipehrtext which looks like base64 surrounded with `{}`
+* `credentials.xml` or a secret ciphertext which looks like base64 surrounded with `{}`
 
 ## Decrypt secrets in credentials.xml
 
