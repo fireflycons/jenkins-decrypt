@@ -1,0 +1,6 @@
+venv/
+.vscode/
+hudson.util.Secret
+master.key
+*.xml
+
