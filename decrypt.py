@@ -88,6 +88,13 @@ def main():
         'CipherText': elem.find('password').text
       })
 
+    for elem in xml._root.iter('org.jenkinsci.plugins.plaincredentials.impl.StringCredentialsImpl'):
+      password_entries.append ({
+        'Type': 'JenkinsStringCredentials',
+        'Id': elem.find('id').text,
+        'CipherText': elem.find('secret').text
+      })
+
     for elem in xml._root.iter('com.cloudbees.jenkins.plugins.sshcredentials.impl.BasicSSHUserPrivateKey'):
       password_entries.append ({
         'Type': 'BasicSSHUserPrivateKey',
@@ -98,7 +105,7 @@ def main():
 
     for elem in xml._root.iter('com.cloudbees.plugins.credentials.impl.StringCredentialsImpl'):
       password_entries.append ({
-        'Type': 'StringCredentials',
+        'Type': 'CloudBeesStringCredentials',
         'Id': elem.find('id').text,
         'CipherText': elem.find('secret').text
       })
@@ -142,7 +149,7 @@ def main():
       print(f'Username: {password_entry["Username"]}')
       print('Private Key:')
       print(password)
-    elif password_entry['Type'] in ['StringCredentials', 'CommandLine']:
+    elif password_entry['Type'] in ['JenkinsStringCredentials', 'CloudBeesStringCredentials', 'CommandLine']:
       print(f'Password: {password}')
     elif password_entry['Type'] == 'GitLabApiToken':
       print(f'Token: {password}')
